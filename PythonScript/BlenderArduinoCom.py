@@ -42,7 +42,7 @@ def DataCom():
         
         # Close the Serial Port and then Open (this must be done because the port may be stucked if not closed properly)
         own['serial_port'].close()
-        onw['serial_port'].open()
+        own['serial_port'].open()
         
         # Checks if there is any I2C devices found in the Arduino
         # Wait for the serial buffer to have 1 bytes of data
@@ -74,7 +74,7 @@ def DataCom():
         data = own['serial_port'].read(16) # Read 16 bytes 
         myByte = own['serial_port'].read(1)
         if myByte == b'E': # If data read is the End of the Quaternion Structure sent from the Arduino
-            quatData = unpack('<fff', data) # Quaternion Byte Data is unpacked into a tuple with an order of (w, x, y, z)
+            quatData = unpack('<ffff', data) # Quaternion Byte Data is unpacked into a tuple with an order of (w, x, y, z)
             #print(quatData) # Uncomment for debugging
     
     # Set the Right Arm Bone's rotation with the extracted quaternion data from the Arduino

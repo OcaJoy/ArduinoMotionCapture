@@ -19,22 +19,33 @@
   Plug the sensor onto the shield
   Serial.print it out at 9600 baud to serial monitor.
 */
+#include <Wire.h>
+#include "SparkFun_BNO080_Arduino_Library.h"
 
 // Intitialize Global Variables
 float quat[4] = {1.0f, 0.0f, 0.0f, 0.0f}; //Float array that holds the quaternion values
 int data_length = sizeof(quat); //Length of the quaternion array in Bytes (should be 16 bytes)
-
-#include <Wire.h>
-
-#include "SparkFun_BNO080_Arduino_Library.h"
 BNO080 myIMU;
 
 void setup()
 {
-  Serial.begin(115200);
+  // Set up Pins for Multiplexer Channel Select
+  pinMode(2, OUTPUT);
+  pinMode(3, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
 
+  // Begin Serial Communication @ 115200 Baud Rate
+  Serial.begin(115200);
+  // Begin I2C Communication
   Wire.begin();
 
+  // Set Multiplex to the first address
+  digitalWrite(2, LOW);
+  digitalWrite(3, LOW);
+  digitalWrite(4, LOW);
+  digitalWrite(5, LOW);
+  
   if (myIMU.begin() == false)
   {
     // Serial.println("BNO080 not detected at default I2C address. Check your jumpers and the hookup guide. Freezing...");
@@ -42,7 +53,7 @@ void setup()
     while (1);
   }
 
-  // Send a byte for python to determine if BNO080 is detected 
+  // Send a byte for python to determine if all BNO080 is detected 
   Serial.write('2'); // Send a '2' to indicate
 
   Wire.setClock(400000); //Increase I2C data rate to 400kHz
