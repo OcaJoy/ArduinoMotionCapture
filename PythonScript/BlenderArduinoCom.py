@@ -7,6 +7,8 @@ import serial.tools.list_ports
 import struct
 from struct import*
 
+#Create HashMap for to choose a bone depending on number inputted
+BoneHashMap = { 1: 'Bone', 3: 'Bone.001', 2: 'Bone.002', 4: 'Bone.003'}
 
 def DataCom():
     # To get the controller thats running this python script 
@@ -44,26 +46,28 @@ def DataCom():
         own['serial_port'].close()
         own['serial_port'].open()
         
+        print("Arduino Connection Established!")
+        
         # Checks if there is any I2C devices found in the Arduino
-        # Wait for the serial buffer to have 1 bytes of data
-        while own['serial_port'].inWaiting() < 1:
-            pass
+        reply = 0
         
-        reply = own['serial_port'].read(1)
-        # print(reply) #Uncomment for debugging
+        while reply != 100:
+            # Wait for the serial buffer to have 1 bytes of data
+            while own['serial_port'].inWaiting() < 1:
+                pass
         
-        # Checks the 
-        if reply == b'1':
-            print("BNO080 is not found!")
-            # Exit the game mode
-            gameactu = cont.actuators['Game']
-            cont.activate(gameactu)
-        elif reply == b'2':
-            print("BNO080 is detected!")
-        else:
-            print("Unknown Communication Error")
-            gameactu = cont.actuators['Game']
-            cont.activate(gameactu)
+            reply = unpack('B', own['serial_port'].read(1))[0]
+            # print(reply) #Uncomment for debugging
+            
+            if reply == 100:
+                print("All BNO080 are functioning!")
+            elif reply == 0:
+                print("The BNO080 listed above are not detected! Program Terminated!")
+                # Exit the game mode
+                gameactu = cont.actuators['Game']
+                cont.activate(gameactu)
+            else:
+                print(" IMU ", reply, "is not responding!")
             
         # start the loop
         mainloop.usePosPulseMode = True
@@ -71,14 +75,19 @@ def DataCom():
     # Main Loop
     myByte = own['serial_port'].read(1)
     if myByte == b'S': # If data read is the Start of the Quaternion Structure sent from the Arduino
+        IMUnumByte = own['serial_port'].read(1)
         data = own['serial_port'].read(16) # Read 16 bytes 
         myByte = own['serial_port'].read(1)
         if myByte == b'E': # If data read is the End of the Quaternion Structure sent from the Arduino
             quatData = unpack('<ffff', data) # Quaternion Byte Data is unpacked into a tuple with an order of (w, x, y, z)
             #print(quatData) # Uncomment for debugging
     
+    IMUnum = unpack('B', IMUnumByte)[0]
+    print(IMUnum)
+    
     # Set the Right Arm Bone's rotation with the extracted quaternion data from the Arduino
-    own.channels['Bone'].rotation_quaternion = quatData
+    own.channels[BoneHashMap[IMUnum]].rotation_quaternion = quatData
+    #own.channels['Bone'].rotation_quaternion = quatData
     own.update() # Update everytime a rotation is made to see changes
-
+    
 DataCom()

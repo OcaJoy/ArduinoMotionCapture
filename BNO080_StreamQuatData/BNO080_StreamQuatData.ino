@@ -25,6 +25,9 @@
 // Intitialize Global Variables
 float quat[4] = {1.0f, 0.0f, 0.0f, 0.0f}; //Float array that holds the quaternion values
 int data_length = sizeof(quat); //Length of the quaternion array in Bytes (should be 16 bytes)
+int deviceCheck = 0; //This value will be the number of devices that are not responding
+byte IMUnum; //This value will contain which IMU is being used for debugging purposes
+boolean dataReady = false;
 BNO080 myIMU;
 
 void setup()
@@ -35,67 +38,112 @@ void setup()
   pinMode(4, OUTPUT);
   pinMode(5, OUTPUT);
 
+  // Initiallize Variables
+  boolean IMUcheck = true;
+
   // Begin Serial Communication @ 115200 Baud Rate
   Serial.begin(115200);
   // Begin I2C Communication
   Wire.begin();
-
-  // Set Multiplex to the first address
-  digitalWrite(2, LOW);
-  digitalWrite(3, LOW);
-  digitalWrite(4, LOW);
-  digitalWrite(5, LOW);
-  
-  if (myIMU.begin() == false)
-  {
-    // Serial.println("BNO080 not detected at default I2C address. Check your jumpers and the hookup guide. Freezing...");
-    Serial.write('1'); // Send a '1' to indicate
-    while (1);
-  }
-
-  // Send a byte for python to determine if all BNO080 is detected 
-  Serial.write('2'); // Send a '2' to indicate
-
   Wire.setClock(400000); //Increase I2C data rate to 400kHz
 
-  myIMU.enableRotationVector(50); //Send data update every 50ms
+  // Loop through all the IMUs to check if they are working and to initiallize them
+  for(int x=1; x<3; x++)
+  {
+    // Set the channel for the Multiplexer
+    MuxSelector(x);
 
-  //Serial.println(F("Rotation vector enabled"));
-  //Serial.println(F("Output in form i, j, k, real, accuracy"));
+    // Check to see if current IMU is not responding
+    if (myIMU.begin() == false) // if not responding 
+    {
+      // Set the IMUcheck to false
+      IMUcheck = false;
+      
+      // Set the IMUnum to the number of the current loop it is in
+      IMUnum = x;
+
+      // Send byte for python to know it is not responding
+      Serial.write(IMUnum);
+    }
+    else // if IMU is responding
+    {
+      // Set the IMU to send data update every 50ms
+      myIMU.enableRotationVector(50); 
+    }  
+  }
+
+  // Check if all the IMU are functioning
+  if (IMUcheck)
+  { 
+    // Set the IMUnum to 100 (Code for: everything is fine)
+    IMUnum = 100;
+
+    // Send byte for python to konw that Arduino is done setting up
+    Serial.write(IMUnum);
+  }
+  else
+  { 
+    // Set the IMUnum to 0 (Code for: one or more IMUs are not responding)
+    IMUnum = 0;
+
+    // Send byte for python to konw that Arduino that not all IMUs are responding
+    Serial.write(IMUnum);
+    
+    // Freeze arduino when not all IMUs are functioning
+    while(1);
+  }
 }
 
 void loop()
-{
-  //Look for reports from the IMU
-  if (myIMU.dataAvailable() == true)
-  {
+{ 
+  // Loop through all the BNO080s to read their data and stream to python
+  for(int x=1; x<3; x++)
+  { 
+    // Select the channel for the Multiplexer
+    MuxSelector(x);
+
+    // Keep checking if data is available
+    while(myIMU.dataAvailable() == false){}
+
     quat[1] = myIMU.getQuatI();
     quat[2] = myIMU.getQuatJ();
     quat[3] = myIMU.getQuatK();
     quat[0] = myIMU.getQuatReal();
-    float quatRadianAccuracy = myIMU.getQuatRadianAccuracy();
-
-    
-    /* //Uncomment to view real time quaternion data for debugging 
-    Serial.print(quat[0], 2);
-    Serial.print(F(","));
-    Serial.print(quat[1], 2);
-    Serial.print(F(","));
-    Serial.print(quat[2], 2);
-    Serial.print(F(","));
-    Serial.print(quat[3], 2);
-    Serial.print(F(","));
-    Serial.print(quatRadianAccuracy, 2);
-    Serial.print(F(","));
-
-    Serial.println();
-    */
 
     // Send the quaternion data
     // Wrap the quaternion structure with a Start("S") Byte and an End("E") Byte to make sure a full structure is received 
     Serial.write('S');
+    IMUnum = x; // Set the IMU number to the current BNO080 being used by the loop
+    Serial.write(IMUnum); //  Send the IMU num to python
     Serial.write((uint8_t *)&quat, data_length);
     Serial.write('E');
-    
+  }
+}
+
+// This function set the Multiplexer to connect to the desired BNO080 depending on the input
+void MuxSelector(int x)
+{
+  switch(x)
+  {
+    case 1:
+      digitalWrite(2, LOW);
+      digitalWrite(3, LOW);
+      digitalWrite(4, LOW);
+      digitalWrite(5, LOW);
+      break;
+
+    case 2:
+      digitalWrite(2, HIGH);
+      digitalWrite(3, LOW);
+      digitalWrite(4, LOW);
+      digitalWrite(5, LOW);
+      break;
+
+    default:
+      digitalWrite(2, LOW);
+      digitalWrite(3, LOW);
+      digitalWrite(4, LOW);
+      digitalWrite(5, LOW);
+      break;
   }
 }
