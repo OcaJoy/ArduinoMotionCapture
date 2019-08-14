@@ -7,10 +7,6 @@ import serial.tools.list_ports
 import struct
 from struct import*
 
-#Create HashMap for to choose a bone depending on number inputted
-#BoneHashMap = 
-#QuaternionList = [[],[]]
-
 def DataCom():
     # To get the controller thats running this python script 
     cont = bge.logic.getCurrentController()
@@ -25,8 +21,8 @@ def DataCom():
     if not 'init' in own:
         own['init'] = 1 #create own['init'], so we know that we have done initialization and we do not run it again
         
+		#Create HashMap for to choose a bone depending on number inputted
         own['bone_map'] = { 1: 'Bone', 2: 'Bone.001', 3: 'Bone.002', 4: 'Bone.003'}
-        own['quat_list'] = [[], []]
         
         arduino_ports = [
             p.device
@@ -86,20 +82,22 @@ def DataCom():
             quatData = unpack('<ffff', data) # Quaternion Byte Data is unpacked into a tuple with an order of (w, x, y, z)
             #print(quatData) # Uncomment for debugging
     
+	# Read which IMU data has just been received 
     IMUnum = unpack('B', IMUnumByte)[0]
-    
-    own['quat_list'][IMUnum-1] = quatData
+    print(IMUnum)
     
     # Set the Bone rotation with the extracted quaternion data from the Arduino
-    if IMUnum == 2:
-        invquat = mathutils.Quaternion(own['quat_list'][0])
-        invquat.invert()
-        own.channels[own['bone_map'][2]].rotation_quaternion = invquat * mathutils.Quaternion(own['quat_list'][1])
+    if IMUnum == 1:
+        own.channels[own['bone_map'][1]].rotation_quaternion = quatData
     else:
-        own.channels[own['bone_map'][1]].rotation_quaternion = own['quat_list'][0]    
+        invquat = mathutils.Quaternion(own.channels[own['bone_map'][IMUnum-1]].rotation_quaternion)
+        invquat.invert()
+        own.channels[own['bone_map'][IMUnum]].rotation_quaternion = invquat * mathutils.Quaternion(quatData)
     
     #own.channels[BoneHashMap[IMUnum]].rotation_quaternion = quatData
     #own.channels['Bone'].rotation_quaternion = quatData
-    own.update() # Update everytime a rotation is made to see changes
+    
+	# Update everytime a rotation is made to see changes
+    own.update() 
     
 DataCom()
