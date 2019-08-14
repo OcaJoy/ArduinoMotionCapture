@@ -8,7 +8,8 @@ import struct
 from struct import*
 
 #Create HashMap for to choose a bone depending on number inputted
-BoneHashMap = { 1: 'Bone', 3: 'Bone.001', 2: 'Bone.002', 4: 'Bone.003'}
+#BoneHashMap = 
+#QuaternionList = [[],[]]
 
 def DataCom():
     # To get the controller thats running this python script 
@@ -23,6 +24,9 @@ def DataCom():
     # Initialization, run this only in the first loop
     if not 'init' in own:
         own['init'] = 1 #create own['init'], so we know that we have done initialization and we do not run it again
+        
+        own['bone_map'] = { 1: 'Bone', 2: 'Bone.001', 3: 'Bone.002', 4: 'Bone.003'}
+        own['quat_list'] = [[], []]
         
         arduino_ports = [
             p.device
@@ -68,7 +72,7 @@ def DataCom():
                 cont.activate(gameactu)
             else:
                 print(" IMU ", reply, "is not responding!")
-            
+           
         # start the loop
         mainloop.usePosPulseMode = True
         
@@ -83,10 +87,18 @@ def DataCom():
             #print(quatData) # Uncomment for debugging
     
     IMUnum = unpack('B', IMUnumByte)[0]
-    print(IMUnum)
     
-    # Set the Right Arm Bone's rotation with the extracted quaternion data from the Arduino
-    own.channels[BoneHashMap[IMUnum]].rotation_quaternion = quatData
+    own['quat_list'][IMUnum-1] = quatData
+    
+    # Set the Bone rotation with the extracted quaternion data from the Arduino
+    if IMUnum == 2:
+        invquat = mathutils.Quaternion(own['quat_list'][0])
+        invquat.invert()
+        own.channels[own['bone_map'][2]].rotation_quaternion = invquat * mathutils.Quaternion(own['quat_list'][1])
+    else:
+        own.channels[own['bone_map'][1]].rotation_quaternion = own['quat_list'][0]    
+    
+    #own.channels[BoneHashMap[IMUnum]].rotation_quaternion = quatData
     #own.channels['Bone'].rotation_quaternion = quatData
     own.update() # Update everytime a rotation is made to see changes
     
