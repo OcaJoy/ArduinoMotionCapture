@@ -48,7 +48,7 @@ void setup()
   Wire.setClock(400000); //Increase I2C data rate to 400kHz
 
   // Loop through all the IMUs to check if they are working and to initiallize them
-  for(int x=1; x<3; x++)
+  for(int x=1; x<4; x++)
   {
     // Set the channel for the Multiplexer
     MuxSelector(x);
@@ -97,7 +97,7 @@ void setup()
 void loop()
 { 
   // Loop through all the BNO080s to read their data and stream to python
-  for(int x=1; x<3; x++)
+  for(int x=1; x<4; x++)
   { 
     // Select the channel for the Multiplexer
     MuxSelector(x);
@@ -135,6 +135,13 @@ void MuxSelector(int x)
     case 2:
       digitalWrite(2, HIGH);
       digitalWrite(3, LOW);
+      digitalWrite(4, LOW);
+      digitalWrite(5, LOW);
+      break;
+
+    case 3:
+      digitalWrite(2, LOW);
+      digitalWrite(3, HIGH);
       digitalWrite(4, LOW);
       digitalWrite(5, LOW);
       break;

@@ -20,9 +20,13 @@ def DataCom():
     # Initialization, run this only in the first loop
     if not 'init' in own:
         own['init'] = 1 #create own['init'], so we know that we have done initialization and we do not run it again
-        
+
+        #Create a List containing the inverse quaternions of the bones
+        BaseQuat = [1.0, 0.0, 0.0, 0.0]
+        own['quat_inv'] = [mathutils.Quaternion(BaseQuat),mathutils.Quaternion(BaseQuat), mathutils.Quaternion(BaseQuat)]
+
 		#Create HashMap for to choose a bone depending on number inputted
-        own['bone_map'] = { 1: 'Bone', 2: 'Bone.001', 3: 'Bone.002', 4: 'Bone.003'}
+        own['bone_map'] = { 1: 'Bone', 2: 'Bone.001', 3: 'Bone.004', 4: 'Bone.002', 5: 'Bone.003', 6: 'Bone.005'}
         
         arduino_ports = [
             p.device
@@ -84,15 +88,16 @@ def DataCom():
     
 	# Read which IMU data has just been received 
     IMUnum = unpack('B', IMUnumByte)[0]
-    print(IMUnum)
-    
+
     # Set the Bone rotation with the extracted quaternion data from the Arduino
-    if IMUnum == 1:
-        own.channels[own['bone_map'][1]].rotation_quaternion = quatData
-    else:
-        invquat = mathutils.Quaternion(own.channels[own['bone_map'][IMUnum-1]].rotation_quaternion)
-        invquat.invert()
-        own.channels[own['bone_map'][IMUnum]].rotation_quaternion = invquat * mathutils.Quaternion(quatData)
+    quaternion = mathutils.Quaternion(quatData)
+    own['quat_inv'][IMUnum-1] = mathutils.Quaternion(quatData)
+    own['quat_inv'][IMUnum-1].invert()
+			
+    if IMUnum > 1:
+        quaternion = own['quat_inv'][IMUnum-2] * quaternion
+	
+    own.channels[own['bone_map'][IMUnum]].rotation_quaternion = quaternion
     
     #own.channels[BoneHashMap[IMUnum]].rotation_quaternion = quatData
     #own.channels['Bone'].rotation_quaternion = quatData
