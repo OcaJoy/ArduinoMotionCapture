@@ -99,9 +99,6 @@ def DataCom():
 	
     own.channels[own['bone_map'][IMUnum]].rotation_quaternion = quaternion
     
-    #own.channels[BoneHashMap[IMUnum]].rotation_quaternion = quatData
-    #own.channels['Bone'].rotation_quaternion = quatData
-    
 	# Update everytime a rotation is made to see changes
     own.update() 
     
